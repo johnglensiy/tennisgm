@@ -503,6 +503,7 @@ export type GameAttributesLeague = {
 	allStarDunk: boolean;
 	allStarThree: boolean;
 	alwaysShowCountry: boolean;
+	weeklyTournamentSeries: WeeklyTournamentSeries | undefined;
 	autoExpand:
 		| {
 				phase: "vote";
@@ -629,6 +630,7 @@ export type GameAttributesLeague = {
 	randomDebutsForever?: number;
 	realDraftRatings?: "draft" | "rookie";
 	realPlayerDeterminism: number;
+	regSeasonScheduleType: "regular" | "tennis";
 	repeatSeason:
 		| undefined
 		| {
@@ -1456,6 +1458,19 @@ export type PlayoffSeries = {
 
 	// undefined means no play-in tournament
 	playIns?: PlayInTournament[];
+};
+
+export type WeeklyTournamentSeries = {
+	season: number;
+	week: number;
+	currentRound: number;
+	series: {
+		home: PlayoffSeriesTeam;
+		away?: PlayoffSeriesTeam;
+		gids?: number[];
+	}[][];
+	complete: boolean;
+	championTid?: number;
 };
 
 export type ContractInfo = {

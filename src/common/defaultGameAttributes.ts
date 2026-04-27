@@ -153,6 +153,8 @@ for (const [sport, keys] of Object.entries(gameAttributesKeysSportSpecific)) {
 }
 
 const defaultGameAttributes: GameAttributesLeagueWithHistory = {
+	regSeasonScheduleType: "tennis",
+	weeklyTournamentSeries: undefined,
 	phase: 0,
 	nextPhase: undefined, // Used only for fantasy draft
 	playerBioInfo: undefined,

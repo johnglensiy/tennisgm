@@ -41,6 +41,7 @@ import getWinner from "../../../common/getWinner.ts";
 import { setLiveSimRatingsStatsPopoverPlayers } from "./setLiveSimRatingsStatsPopoverPlayers.ts";
 import { getOneUpcomingGame } from "../../util/recomputeLocalUITeamOvrs.ts";
 import { isSport } from "../../../common/sportFunctions.ts";
+import { startWeek } from "../season/weeklyTournament.ts";
 
 /**
  * Play one or more days of games.
@@ -71,11 +72,29 @@ const play = async (
 		const schedule = await season.getSchedule();
 		if (g.get("phase") < PHASE.PLAYOFFS) {
 			if (schedule.length === 0) {
-				await phase.newPhase(
-					PHASE.PLAYOFFS,
-					conditions,
-					gidOneGame !== undefined,
-				);
+				// Special regular-season mode: weekly single-elimination tournaments ("tennis")
+				if (g.get("regSeasonScheduleType") === "tennis") {
+					const series = g.get("weeklyTournamentSeries");
+					const nextWeek = (series?.week ?? 0) + 1;
+
+					const teams = await idb.getCopies.teamsPlus(
+						{
+							attrs: ["tid"],
+							seasonAttrs: ["cid"],
+							season: g.get("season"),
+							active: true,
+						},
+						"noCopyCache",
+					);
+
+					await startWeek(teams, nextWeek);
+				} else {
+					await phase.newPhase(
+						PHASE.PLAYOFFS,
+						conditions,
+						gidOneGame !== undefined,
+					);
+				}
 			}
 		} else if (playoffsOver) {
 			await phase.newPhase(
@@ -399,8 +418,6 @@ const play = async (
 			neutralSite: neutralSite || allStarGame,
 			allStarGame,
 			baseInjuryRate,
-
-			// @ts-expect-error
 			dh,
 		}).run();
 	};
