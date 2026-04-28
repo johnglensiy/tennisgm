@@ -41,7 +41,11 @@ import getWinner from "../../../common/getWinner.ts";
 import { setLiveSimRatingsStatsPopoverPlayers } from "./setLiveSimRatingsStatsPopoverPlayers.ts";
 import { getOneUpcomingGame } from "../../util/recomputeLocalUITeamOvrs.ts";
 import { isSport } from "../../../common/sportFunctions.ts";
-import { startWeek } from "../season/weeklyTournament.ts";
+import {
+	advanceRound,
+	startWeek,
+	updateWeeklyTournamentSeries,
+} from "../season/weeklyTournament.ts";
 
 /**
  * Play one or more days of games.
@@ -75,19 +79,33 @@ const play = async (
 				// Special regular-season mode: weekly single-elimination tournaments ("tennis")
 				if (g.get("regSeasonScheduleType") === "tennis") {
 					const series = g.get("weeklyTournamentSeries");
-					const nextWeek = (series?.week ?? 0) + 1;
-
-					const teams = await idb.getCopies.teamsPlus(
-						{
-							attrs: ["tid"],
-							seasonAttrs: ["cid"],
-							season: g.get("season"),
-							active: true,
-						},
-						"noCopyCache",
+					const weekComplete = !series || series.complete;
+					console.log(
+						"[weekly] cbNoGames: week=",
+						series?.week,
+						"round=",
+						series?.currentRound,
+						"complete=",
+						series?.complete,
+						"weekComplete=",
+						weekComplete,
 					);
 
-					await startWeek(teams, nextWeek);
+					if (weekComplete) {
+						const nextWeek = (series?.week ?? 0) + 1;
+						const teams = await idb.getCopies.teamsPlus(
+							{
+								attrs: ["tid"],
+								seasonAttrs: ["cid"],
+								season: g.get("season"),
+								active: true,
+							},
+							"noCopyCache",
+						);
+						await startWeek(teams, nextWeek);
+					} else {
+						await advanceRound();
+					}
 				} else {
 					await phase.newPhase(
 						PHASE.PLAYOFFS,
@@ -169,6 +187,9 @@ const play = async (
 			// Update playoff series W/L
 			await updatePlayoffSeries(results, conditions);
 		} else {
+			if (g.get("regSeasonScheduleType") === "tennis") {
+				await updateWeeklyTournamentSeries(results);
+			}
 			// Update clinchedPlayoffs, only if there are games left in the schedule. Otherwise, this would be inaccruate (not correctly accounting for tiebreakers) and redundant (going to be called again on phase change)
 			const schedule = await season.getSchedule();
 			if (schedule.length > 0) {
